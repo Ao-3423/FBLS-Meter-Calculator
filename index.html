@@ -143,20 +143,16 @@
 
     <div class="box">
       VOL REQ: <input id="volReq" type="number" /><br />
-      Blend % (Meter2): <input id="blend" type="number" step="0.1" /><br />
+      Blend % : <input id="blend" type="number" step="0.1" /><br />
       MF: <input id="mf" type="number" step="0.00001" /><br />
       VCF: <input id="vcf" type="number" step="0.00001" /><br /><br />
-
       <b>Actual LOADED_GROSS</b><br />
-      M1 <input id="g1" type="number" /> M2 <input id="g2" type="number" /> M3
-      <input id="g3" type="number" /> M4 <input id="g4" type="number" /> M5
-      <input id="g5" type="number" /> M6 <input id="g6" type="number" /><br />
+      M1 <input id="g1" type="number" /> M2
+      <input id="g2" type="number" /><br />
 
       <b>Actual LOADED_NEL</b><br />
-      M1 <input id="n1" type="number" /> M2 <input id="n2" type="number" /> M3
-      <input id="n3" type="number" /> M4 <input id="n4" type="number" /> M5
-      <input id="n5" type="number" /> M6
-      <input id="n6" type="number" /><br /><br />
+      M1 <input id="n1" type="number" /> M2
+      <input id="n2" type="number" /><br /><br />
 
       <button onclick="calc()">CALCULATE</button>
     </div>
@@ -182,68 +178,40 @@
         // ===== STEP 1: Blend Target =====
         let blendTarget = V * B;
 
-        // ===== STEP 2: RAW blend meters (M2–M6) =====
-        let raw = {};
-        let sumBlendRaw = 0;
-
-        for (let i = 2; i <= 6; i++) {
-          raw[i] = val("g" + i);
-          sumBlendRaw += raw[i];
-        }
-
-        // ===== STEP 3: Normalize GROSS =====
+        // ===== STEP 2: RAW blend meter (M2 ONLY) =====
         let gross = {};
-        let blendSumNormalized = 0;
 
-        for (let i = 2; i <= 6; i++) {
-          if (sumBlendRaw > 0) {
-            gross[i] = blendTarget * (raw[i] / sumBlendRaw);
-          } else {
-            gross[i] = 0;
-          }
-          gross[i] = roundUp(gross[i]);
-          blendSumNormalized += gross[i];
-        }
+        gross[2] = roundUp(blendTarget); // M2 = blend target ตรงๆ
+        gross[1] = roundUp(V - gross[2]); // M1 balance
 
-        // M1 balance
-        gross[1] = roundUp(V - blendSumNormalized);
-
-        // ===== STEP 4: NEL (VCF ONLY ตามพี่เขา) =====
+        // ===== STEP 3: NEL (VCF ONLY) =====
         let nel = {};
-        for (let i = 1; i <= 6; i++) {
-          nel[i] = roundUp(gross[i] * VCF);
-        }
+        nel[1] = roundUp(gross[1] * VCF);
+        nel[2] = roundUp(gross[2] * VCF);
 
         // ===== TOTALS =====
-        let grossTotal = 0,
-          nelTotal = 0;
-
-        for (let i = 1; i <= 6; i++) {
-          grossTotal += gross[i];
-          nelTotal += nel[i];
-        }
+        let grossTotal = gross[1] + gross[2];
+        let nelTotal = nel[1] + nel[2];
 
         // ===== FINAL CORRECTED (MF คูณตอนจบเท่านั้น) =====
         let correctedTotal = roundUp(nelTotal * MF);
 
         // ===== DISPLAY =====
         let out = `<h3>LOADED_GROSS</h3>`;
-        for (let i = 1; i <= 6; i++) {
-          out += `M${i}: ${gross[i].toFixed(2)} L<br>`;
-        }
+        out += `M1: ${gross[1].toFixed(2)} L<br>`;
+        out += `M2: ${gross[2].toFixed(2)} L<br>`;
         out += `<b>Total: ${grossTotal.toFixed(2)} L</b><hr>`;
 
         out += `<h3>LOADED_NEL (VCF only)</h3>`;
-        for (let i = 1; i <= 6; i++) {
-          out += `M${i}: ${nel[i].toFixed(2)} L<br>`;
-        }
+        out += `M1: ${nel[1].toFixed(2)} L<br>`;
+        out += `M2: ${nel[2].toFixed(2)} L<br>`;
         out += `<b>Total NEL: ${nelTotal.toFixed(2)} L</b><hr>`;
 
         out += `<h3>Final Corrected (MF×VCF)</h3>`;
         out += `<b>${correctedTotal.toFixed(2)} L</b><hr>`;
 
         out += `VCF = ${VCF} | MF = ${MF}<br>`;
-        out += `Blend Target (M2–M6) = ${roundUp(blendTarget).toFixed(2)} L`;
+        out += `Blend Target (M2) = ${roundUp(blendTarget).toFixed(2)} L`;
 
         document.getElementById("result").innerHTML = out;
       }
